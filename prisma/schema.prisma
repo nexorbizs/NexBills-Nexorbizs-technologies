@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+
+  users     User[]
+  products  Product[]
+  customers Customer[]
+  sales     Sale[]
+  setting   Setting?
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String   @default("OWNER")
+  companyId Int
+  createdAt DateTime @default(now())
+
+  company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Setting {
+  id        Int     @id @default(autoincrement())
+  companyId Int     @unique
+  shopName  String
+  gstNumber String
+  phone     String
+  address   String
+
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  sku       String
+  hsn       String
+  price     Float
+  stock     Int
+  cgst      Float
+  sgst      Float
+  companyId Int
+  createdAt DateTime @default(now())
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  saleItems SaleItem[]
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  address   String
+  companyId Int
+  createdAt DateTime @default(now())
+
+  company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Sale {
+  id             Int       @id @default(autoincrement())
+  invoiceNo      String
+  customerName   String
+  customerPhone  String
+  subTotal       Float
+  roundOff       Float
+  total          Float
+  paymentMode    String
+  amountReceived Float
+  balance        Float
+  companyId      Int
+  createdAt      DateTime  @default(now())
+
+  company        Company   @relation(fields: [companyId], references: [id])
+  items          SaleItem[]
+}
+
+model SaleItem {
+  id          Int     @id @default(autoincrement())
+  saleId      Int
+  productId   Int
+  productName String
+  hsn         String
+  price       Float
+  qty         Int
+  cgst        Float
+  sgst        Float
+  total       Float
+
+  sale        Sale    @relation(fields: [saleId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+}
