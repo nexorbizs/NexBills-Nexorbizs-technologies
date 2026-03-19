@@ -15,14 +15,14 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// ⭐ HEALTHCHECK
-app.get("/health", (req, res) => {
-  res.status(200).send("OK")
-})
-
 // ⭐ ROOT
 app.get("/", (req, res) => {
   res.send("NexBills Backend Running")
+})
+
+// ⭐ HEALTHCHECK
+app.get("/health", (req, res) => {
+  res.status(200).send("OK")
 })
 
 // ⭐ ROUTES
