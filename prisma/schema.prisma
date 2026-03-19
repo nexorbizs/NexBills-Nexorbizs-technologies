@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Company {
@@ -55,7 +56,7 @@ model Product {
   companyId Int
   createdAt DateTime @default(now())
 
-  company   Company  @relation(fields: [companyId], references: [id])
+  company   Company    @relation(fields: [companyId], references: [id])
   saleItems SaleItem[]
 }
 
@@ -71,7 +72,7 @@ model Customer {
 }
 
 model Sale {
-  id             Int       @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   invoiceNo      String
   customerName   String
   customerPhone  String
@@ -82,9 +83,9 @@ model Sale {
   amountReceived Float
   balance        Float
   companyId      Int
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime @default(now())
 
-  company        Company   @relation(fields: [companyId], references: [id])
+  company        Company    @relation(fields: [companyId], references: [id])
   items          SaleItem[]
 }
 
