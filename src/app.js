@@ -20,10 +20,6 @@ app.get("/", (req, res)=>{
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req,res)=>{
-    res.send("SERVER WORKING");
-})
-
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
