@@ -13,14 +13,17 @@ import invoiceRoutes from "./routes/invoiceRoutes.js";
 
 const app = express();
 
-
-
-app.use(cors());
-app.use(express.json());
+app.get("/", (req, res)=>{
+  res.send("NexBills Backend Running")
+});
 
 app.get("/health", (req, res)=>{
   res.send("NexBills Backend Running")
 });
+
+app.use(cors());
+app.use(express.json());
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
