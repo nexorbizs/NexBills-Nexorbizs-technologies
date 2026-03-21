@@ -4,7 +4,7 @@ import prisma from "../config/prisma.js";
 
 export const addProduct = async (req, res) => {
   try {
-    const { name, sku, hsn, price, stock, cgst, sgst } = req.body;
+    const { name, sku, hsn, price, stock, cgst, sgst, discount } = req.body;
 
     if (!name || !sku || !hsn || price === undefined || stock === undefined)
       return res.status(400).json({ error: "All fields required" });
@@ -36,8 +36,9 @@ export const addProduct = async (req, res) => {
         hsn,
         price: Number(price),
         stock: Number(stock),
-        cgst: Number(cgst),
-        sgst: Number(sgst),
+        cgst: Number(cgst || 0),
+        sgst: Number(sgst || 0),
+        discount: Number(discount || 0),  // ⭐ SAVE DISCOUNT
         companyId: req.companyId
       }
     });
@@ -71,7 +72,6 @@ export const deleteProduct = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    // ⭐ CHECK IF PRODUCT HAS SALES
     const salesCount = await prisma.saleItem.count({
       where: { productId: id }
     });
@@ -99,7 +99,6 @@ export const updateStock = async (req, res) => {
     const id = Number(req.params.id);
     const { change } = req.body;
 
-    // ⭐ PREVENT NEGATIVE STOCK
     const product = await prisma.product.findUnique({ where: { id } });
 
     if (!product)

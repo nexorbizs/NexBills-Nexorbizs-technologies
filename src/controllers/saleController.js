@@ -1,5 +1,4 @@
 import prisma from "../config/prisma.js";
-import { generateInvoicePdf } from "../utils/invoicePdf.js";
 
 /* ⭐ AUTO INVOICE GENERATOR */
 const generateInvoice = async (companyId) => {
@@ -9,7 +8,6 @@ const generateInvoice = async (companyId) => {
   });
 
   const nextNumber = lastSale ? lastSale.id + 1 : 1;
-
   return `INV-${String(nextNumber).padStart(4, "0")}`;
 };
 
@@ -21,7 +19,9 @@ export const createSale = async (req, res) => {
       customerPhone,
       paymentMode,
       amountReceived,
-      items
+      items,
+      discountType = "percent",  // "percent" or "flat"
+      discountValue = 0          // % or ₹ amount
     } = req.body;
 
     const invoiceNo = await generateInvoice(req.companyId);
@@ -42,7 +42,12 @@ export const createSale = async (req, res) => {
       if (product.stock < i.qty)
         return res.status(400).json({ message: `${product.name} stock low` });
 
-      const taxable = product.price * i.qty;
+      // ⭐ ITEM DISCOUNT
+      const itemDiscount = Number(i.discount || 0);
+      const originalPrice = product.price;
+      const discountedPrice = originalPrice * (1 - itemDiscount / 100);
+
+      const taxable = discountedPrice * i.qty;
       const cgstAmt = taxable * product.cgst / 100;
       const sgstAmt = taxable * product.sgst / 100;
       const total = taxable + cgstAmt + sgstAmt;
@@ -54,8 +59,10 @@ export const createSale = async (req, res) => {
         productId: product.id,
         productName: product.name,
         hsn: product.hsn,
-        price: product.price,
+        price: originalPrice,
         qty: i.qty,
+        discount: itemDiscount,
+        discountedPrice,
         cgst: product.cgst,
         sgst: product.sgst,
         total
@@ -67,7 +74,23 @@ export const createSale = async (req, res) => {
       });
     }
 
-    const grandTotal = subTotal + totalGST;
+    // ⭐ BILL LEVEL DISCOUNT
+    let discountAmount = 0;
+
+    if (discountType === "percent") {
+      discountAmount = subTotal * Number(discountValue) / 100;
+    } else {
+      discountAmount = Number(discountValue);
+    }
+
+    // ⭐ APPLY BILL DISCOUNT BEFORE GST
+    const discountedSubTotal = subTotal - discountAmount;
+
+    // Recalculate GST on discounted subtotal
+    const gstMultiplier = subTotal > 0 ? discountedSubTotal / subTotal : 1;
+    const adjustedGST = totalGST * gstMultiplier;
+
+    const grandTotal = discountedSubTotal + adjustedGST;
     const roundOff = Math.round(grandTotal) - grandTotal;
     const finalTotal = Math.round(grandTotal);
 
@@ -82,6 +105,9 @@ export const createSale = async (req, res) => {
         customerName,
         customerPhone,
         subTotal,
+        discountType,
+        discountValue: Number(discountValue),
+        discountAmount,
         roundOff,
         total: finalTotal,
         paymentMode,
