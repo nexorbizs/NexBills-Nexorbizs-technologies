@@ -89,7 +89,8 @@ export const createSale = async (req, res) => {
         balance,
         companyId: req.companyId,
         items: { create: saleItems }
-      }
+      },
+      include: { items: true }
     });
 
     res.json({ message: "Sale created", sale });
