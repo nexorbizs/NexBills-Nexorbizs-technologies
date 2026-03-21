@@ -11,10 +11,7 @@ export const addProduct = async (req, res) => {
 
     // ⭐ DUPLICATE SKU CHECK
     const existingSku = await prisma.product.findFirst({
-      where: {
-        sku,
-        companyId: req.companyId
-      }
+      where: { sku, companyId: req.companyId }
     });
 
     if (existingSku)
@@ -24,10 +21,7 @@ export const addProduct = async (req, res) => {
 
     // ⭐ DUPLICATE HSN CHECK
     const existingHsn = await prisma.product.findFirst({
-      where: {
-        hsn,
-        companyId: req.companyId
-      }
+      where: { hsn, companyId: req.companyId }
     });
 
     if (existingHsn)
@@ -77,6 +71,16 @@ export const deleteProduct = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
+    // ⭐ CHECK IF PRODUCT HAS SALES
+    const salesCount = await prisma.saleItem.count({
+      where: { productId: id }
+    });
+
+    if (salesCount > 0)
+      return res.status(400).json({
+        error: `Cannot delete — product is used in ${salesCount} sale(s). Disable it instead.`
+      });
+
     await prisma.product.delete({
       where: { id }
     });
@@ -95,16 +99,21 @@ export const updateStock = async (req, res) => {
     const id = Number(req.params.id);
     const { change } = req.body;
 
-    const product = await prisma.product.update({
+    // ⭐ PREVENT NEGATIVE STOCK
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product)
+      return res.status(404).json({ error: "Product not found" });
+
+    if (product.stock + change < 0)
+      return res.status(400).json({ error: "Stock cannot be negative" });
+
+    const updated = await prisma.product.update({
       where: { id },
-      data: {
-        stock: {
-          increment: change
-        }
-      }
+      data: { stock: { increment: change } }
     });
 
-    res.json(product);
+    res.json(updated);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
