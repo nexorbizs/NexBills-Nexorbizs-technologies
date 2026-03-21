@@ -5,6 +5,22 @@ export const addCustomer = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
 
+    if (!name || !phone || !address)
+      return res.status(400).json({ error: "All fields required" });
+
+    // ⭐ DUPLICATE PHONE CHECK
+    const existing = await prisma.customer.findFirst({
+      where: {
+        phone,
+        companyId: req.companyId
+      }
+    });
+
+    if (existing)
+      return res.status(400).json({
+        error: `Phone already exists for customer: ${existing.name}`
+      });
+
     const customer = await prisma.customer.create({
       data: {
         name,

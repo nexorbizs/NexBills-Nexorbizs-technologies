@@ -6,6 +6,35 @@ export const addProduct = async (req, res) => {
   try {
     const { name, sku, hsn, price, stock, cgst, sgst } = req.body;
 
+    if (!name || !sku || !hsn || price === undefined || stock === undefined)
+      return res.status(400).json({ error: "All fields required" });
+
+    // ⭐ DUPLICATE SKU CHECK
+    const existingSku = await prisma.product.findFirst({
+      where: {
+        sku,
+        companyId: req.companyId
+      }
+    });
+
+    if (existingSku)
+      return res.status(400).json({
+        error: `SKU "${sku}" already exists for product: ${existingSku.name}`
+      });
+
+    // ⭐ DUPLICATE HSN CHECK
+    const existingHsn = await prisma.product.findFirst({
+      where: {
+        hsn,
+        companyId: req.companyId
+      }
+    });
+
+    if (existingHsn)
+      return res.status(400).json({
+        error: `HSN "${hsn}" already exists for product: ${existingHsn.name}`
+      });
+
     const product = await prisma.product.create({
       data: {
         name,
