@@ -9,26 +9,43 @@ datasource db {
 }
 
 model Company {
-  id        Int       @id @default(autoincrement())
-  name      String
-  email     String    @unique
-  password  String
-  createdAt DateTime  @default(now())
-  users     User[]
-  products  Product[]
-  customers Customer[]
-  sales     Sale[]
-  setting   Setting?
-  suppliers Supplier[]
-  purchases Purchase[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  password     String
+  createdAt    DateTime      @default(now())
+  users        User[]
+  products     Product[]
+  customers    Customer[]
+  sales        Sale[]
+  setting      Setting?
+  suppliers    Supplier[]
+  purchases    Purchase[]
+  subscription Subscription?
+}
+
+model Subscription {
+  id          Int      @id @default(autoincrement())
+  companyId   Int      @unique
+  plan        String   @default("trial")   // trial, basic, pro, enterprise
+  status      String   @default("active")  // active, expired, suspended
+  startDate   DateTime @default(now())
+  expiryDate  DateTime
+  maxUsers    Int      @default(1)
+  maxBranches Int      @default(1)
+  notes       String   @default("")
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id])
 }
 
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
-  role      String   @default("OWNER")
+  role      String   @default("OWNER")   // OWNER, MANAGER, CASHIER
+  name      String   @default("")
   companyId Int
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
 }
