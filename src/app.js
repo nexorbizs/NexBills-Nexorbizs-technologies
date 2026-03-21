@@ -11,6 +11,7 @@ import invoiceRoutes from "./routes/invoiceRoutes.js";
 import supplierRoutes from "./routes/supplierRoutes.js";
 import purchaseRoutes from "./routes/purchaseRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 
@@ -39,5 +40,6 @@ app.use("/api/invoice", invoiceRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/users", userRoutes);
 
 export default app;

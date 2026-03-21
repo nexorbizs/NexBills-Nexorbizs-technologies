@@ -126,11 +126,20 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { companyId: company.id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // ⭐ GET OWNER USER
+const ownerUser = await prisma.user.findFirst({
+  where: { companyId: company.id, role: "OWNER" }
+});
+
+const token = jwt.sign(
+  {
+    companyId: company.id,
+    userId: ownerUser?.id,
+    role: ownerUser?.role || "OWNER"
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
     // ⭐ SEND SUBSCRIPTION INFO WITH RESPONSE
     const { password: _, ...companyData } = company;
