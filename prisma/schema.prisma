@@ -19,6 +19,8 @@ model Company {
   customers Customer[]
   sales     Sale[]
   setting   Setting?
+  suppliers Supplier[]
+  purchases Purchase[]
 }
 
 model User {
@@ -42,19 +44,20 @@ model Setting {
 }
 
 model Product {
-  id        Int      @id @default(autoincrement())
-  name      String
-  sku       String
-  hsn       String
-  price     Float
-  stock     Int
-  cgst      Float
-  sgst      Float
-  discount  Float    @default(0)
-  companyId Int
-  createdAt DateTime @default(now())
-  company   Company    @relation(fields: [companyId], references: [id])
-  saleItems SaleItem[]
+  id            Int      @id @default(autoincrement())
+  name          String
+  sku           String
+  hsn           String
+  price         Float
+  stock         Int
+  cgst          Float
+  sgst          Float
+  discount      Float    @default(0)
+  companyId     Int
+  createdAt     DateTime @default(now())
+  company       Company       @relation(fields: [companyId], references: [id])
+  saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
 }
 
 model Customer {
@@ -65,6 +68,53 @@ model Customer {
   companyId Int
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  phone     String
+  address   String
+  gstin     String     @default("")
+  companyId Int
+  createdAt DateTime   @default(now())
+  company   Company    @relation(fields: [companyId], references: [id])
+  purchases Purchase[]
+}
+
+model Purchase {
+  id             Int            @id @default(autoincrement())
+  purchaseNo     String
+  supplierId     Int
+  supplierName   String
+  subTotal       Float
+  discountAmount Float          @default(0)
+  taxAmount      Float          @default(0)
+  total          Float
+  paymentMode    String         @default("cash")
+  amountPaid     Float          @default(0)
+  balance        Float          @default(0)
+  notes          String         @default("")
+  companyId      Int
+  createdAt      DateTime       @default(now())
+  company        Company        @relation(fields: [companyId], references: [id])
+  supplier       Supplier       @relation(fields: [supplierId], references: [id])
+  items          PurchaseItem[]
+}
+
+model PurchaseItem {
+  id          Int      @id @default(autoincrement())
+  purchaseId  Int
+  productId   Int
+  productName String
+  hsn         String
+  qty         Int
+  price       Float
+  cgst        Float    @default(0)
+  sgst        Float    @default(0)
+  total       Float
+  purchase    Purchase @relation(fields: [purchaseId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
 }
 
 model Sale {
