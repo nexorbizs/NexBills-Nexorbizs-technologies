@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOtpEmail = async (toEmail, otp) => {
   await resend.emails.send({
-    from: "NexBills <onboarding@resend.dev>", // ⭐ use this until you verify your domain
+    from: "NexBills <noreply@nexorbizs.com>",
     to: toEmail,
     subject: "Password Reset OTP — NexBills",
     html: `
