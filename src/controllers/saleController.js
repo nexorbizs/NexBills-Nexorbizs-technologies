@@ -114,6 +114,7 @@ export const createSale = async (req, res) => {
         amountReceived,
         balance,
         companyId: req.companyId,
+        branchId: req.body.branchId ? Number(req.body.branchId) : null,
         items: { create: saleItems }
       },
       include: { items: true }
