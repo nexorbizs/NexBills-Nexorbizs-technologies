@@ -13,6 +13,7 @@ import purchaseRoutes from "./routes/purchaseRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import branchRoutes from "./routes/branchRoutes.js";
+import activityRoutes from "./routes/activityRoutes.js";
 
 const app = express();
 
@@ -43,5 +44,6 @@ app.use("/api/purchases", purchaseRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/branches", branchRoutes);
+app.use("/api/activity", activityRoutes);
 
 export default app;
