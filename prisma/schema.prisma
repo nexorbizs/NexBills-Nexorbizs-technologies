@@ -9,11 +9,11 @@ datasource db {
 }
 
 model Company {
-  id           Int           @id @default(autoincrement())
+  id           Int            @id @default(autoincrement())
   name         String
-  email        String        @unique
+  email        String         @unique
   password     String
-  createdAt    DateTime      @default(now())
+  createdAt    DateTime       @default(now())
   users        User[]
   products     Product[]
   customers    Customer[]
@@ -23,29 +23,30 @@ model Company {
   purchases    Purchase[]
   subscription Subscription?
   branches     Branch[]
+  activityLogs ActivityLog[]  // ⭐ NEW
 }
 
 model Branch {
-  id        Int          @id @default(autoincrement())
-  name      String
-  address   String       @default("")
-  phone     String       @default("")
-  isActive  Boolean      @default(true)
-  companyId Int
-  createdAt DateTime     @default(now())
-  company   Company      @relation(fields: [companyId], references: [id])
-  sales     Sale[]
-  purchases Purchase[]
-  customers Customer[]
-  users     UserBranch[] // ⭐ many-to-many
+  id           Int          @id @default(autoincrement())
+  name         String
+  address      String       @default("")
+  phone        String       @default("")
+  isActive     Boolean      @default(true)
+  companyId    Int
+  createdAt    DateTime     @default(now())
+  company      Company      @relation(fields: [companyId], references: [id])
+  sales        Sale[]
+  purchases    Purchase[]
+  customers    Customer[]
+  users        UserBranch[]
+  activityLogs ActivityLog[] // ⭐ NEW
 }
 
-// ⭐ NEW join table
 model UserBranch {
-  userId    Int
-  branchId  Int
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId   Int
+  branchId Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@id([userId, branchId])
 }
@@ -65,16 +66,35 @@ model Subscription {
 }
 
 model User {
-  id        Int          @id @default(autoincrement())
-  email     String       @unique
-  password  String
-  role      String       @default("OWNER")
-  name      String       @default("")
-  companyId Int
-  isActive  Boolean      @default(true)
-  createdAt DateTime     @default(now())
-  company   Company      @relation(fields: [companyId], references: [id])
-  branches  UserBranch[] // ⭐ removed branchId, added many-to-many
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  role         String        @default("OWNER")
+  name         String        @default("")
+  companyId    Int
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  company      Company       @relation(fields: [companyId], references: [id])
+  branches     UserBranch[]
+  activityLogs ActivityLog[] // ⭐ NEW
+}
+
+// ⭐ NEW - Activity Log model
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  companyId  Int
+  userId     Int?
+  branchId   Int?
+  userName   String   @default("")
+  branchName String   @default("")
+  module     String   // "SALE" | "PRODUCT" | "CUSTOMER" | "PURCHASE"
+  action     String   // "CREATED" | "UPDATED" | "DELETED"
+  summary    String   // human readable: "Created invoice #INV001 for John - ₹500"
+  details    String   @default("") // optional JSON or extra info
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [companyId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+  branch     Branch?  @relation(fields: [branchId], references: [id])
 }
 
 model Setting {
@@ -110,7 +130,7 @@ model Customer {
   phone     String
   address   String
   companyId Int
-  branchId  Int?   
+  branchId  Int?
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
   branch    Branch?  @relation(fields: [branchId], references: [id])

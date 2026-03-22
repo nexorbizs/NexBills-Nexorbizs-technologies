@@ -1,31 +1,30 @@
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   try {
-
     let token = null;
 
-    /* ⭐ NORMAL API TOKEN */
     const authHeader = req.headers.authorization;
-    if (authHeader) {
-      token = authHeader.split(" ")[1];
-    }
+    if (authHeader) token = authHeader.split(" ")[1];
+    if (!token && req.query.token) token = req.query.token;
 
-    /* ⭐ PDF TOKEN (QUERY PARAM) */
-    if (!token && req.query.token) {
-      token = req.query.token;
-    }
-
-    if (!token) {
-      return res.status(401).json({ message: "No token" });
-    }
+    if (!token) return res.status(401).json({ message: "No token" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.companyId = decoded.companyId;
     req.userId = decoded.userId;
     req.role = decoded.role || "OWNER";
+
+    // ⭐ Fetch user name for activity logging
+    if (decoded.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { name: true }
+      });
+      req.userName = user?.name || "Unknown";
+    }
 
     next();
 
@@ -34,8 +33,6 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 };
-
-/* ================= ROLE MIDDLEWARE ================= */
 
 export const requireRole = (...roles) => {
   return (req, res, next) => {
