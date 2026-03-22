@@ -154,6 +154,12 @@ const token = jwt.sign(
         daysLeft: Math.ceil(
           (new Date(sub.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
         )
+      },
+      user: {
+        id: ownerUser?.id,
+        name: ownerUser?.name || company.name,
+        email: company.email,
+        role: "OWNER"
       }
     });
 
