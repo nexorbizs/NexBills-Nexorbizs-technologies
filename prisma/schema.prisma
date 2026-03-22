@@ -117,6 +117,7 @@ model Product {
   cgst          Float
   sgst          Float
   discount      Float          @default(0)
+  barcode   String   @default("")
   companyId     Int
   createdAt     DateTime       @default(now())
   company       Company        @relation(fields: [companyId], references: [id])

@@ -4,7 +4,7 @@ import { logActivity } from "../utils/activityLogger.js";
 /* ================= ADD PRODUCT ================= */
 export const addProduct = async (req, res) => {
   try {
-    const { name, sku, hsn, price, stock, cgst, sgst, discount } = req.body;
+    const { name, sku, hsn, barcode, price, stock, cgst, sgst, discount } = req.body;
 
     if (!name || !sku || !hsn || price === undefined || stock === undefined)
       return res.status(400).json({ error: "All fields required" });
@@ -21,9 +21,19 @@ export const addProduct = async (req, res) => {
     if (existingHsn)
       return res.status(400).json({ error: `HSN "${hsn}" already exists for product: ${existingHsn.name}` });
 
+    // ⭐ Check duplicate barcode
+    if (barcode && barcode.trim() !== "") {
+      const existingBarcode = await prisma.product.findFirst({
+        where: { barcode: barcode.trim(), companyId: req.companyId }
+      });
+      if (existingBarcode)
+        return res.status(400).json({ error: `Barcode "${barcode}" already exists for product: ${existingBarcode.name}` });
+    }
+
     const product = await prisma.product.create({
       data: {
         name, sku, hsn,
+        barcode: barcode?.trim() || "",
         price: Number(price),
         stock: Number(stock),
         cgst: Number(cgst || 0),
@@ -33,15 +43,14 @@ export const addProduct = async (req, res) => {
       }
     });
 
-    // ⭐ LOG ACTIVITY
     await logActivity({
       companyId: req.companyId,
       userId: req.userId,
       userName: req.userName || "Unknown",
       module: "PRODUCT",
       action: "CREATED",
-      summary: `Added product "${name}" — SKU: ${sku}, Stock: ${stock}, Price: ₹${price}`,
-      details: JSON.stringify({ name, sku, hsn, price, stock, cgst, sgst })
+      summary: `Added product "${name}" — SKU: ${sku}, Barcode: ${barcode || "N/A"}, Stock: ${stock}, Price: ₹${price}`,
+      details: JSON.stringify({ name, sku, hsn, barcode, price, stock, cgst, sgst })
     });
 
     res.json(product);
@@ -64,11 +73,32 @@ export const getProducts = async (req, res) => {
   }
 };
 
+/* ================= SEARCH BY BARCODE ================= */ // ⭐ NEW
+export const getProductByBarcode = async (req, res) => {
+  try {
+    const { barcode } = req.params;
+
+    const product = await prisma.product.findFirst({
+      where: {
+        companyId: req.companyId,
+        barcode: barcode.trim()
+      }
+    });
+
+    if (!product)
+      return res.status(404).json({ error: "Product not found for this barcode" });
+
+    res.json(product);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 /* ================= DELETE PRODUCT ================= */
 export const deleteProduct = async (req, res) => {
   try {
     const id = Number(req.params.id);
-
     const product = await prisma.product.findUnique({ where: { id } });
 
     const salesCount = await prisma.saleItem.count({ where: { productId: id } });
@@ -79,7 +109,6 @@ export const deleteProduct = async (req, res) => {
 
     await prisma.product.delete({ where: { id } });
 
-    // ⭐ LOG ACTIVITY
     await logActivity({
       companyId: req.companyId,
       userId: req.userId,
@@ -117,7 +146,6 @@ export const updateStock = async (req, res) => {
       data: { stock: { increment: change } }
     });
 
-    // ⭐ LOG ACTIVITY
     await logActivity({
       companyId: req.companyId,
       userId: req.userId,
