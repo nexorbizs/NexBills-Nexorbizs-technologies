@@ -4,18 +4,20 @@ import {
   createUser,
   toggleUser,
   deleteUser,
-  staffLogin
+  staffLogin,
+  updateUserBranches // ⭐ new
 } from "../controllers/userController.js";
 import { authMiddleware, requireRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ⭐ STAFF LOGIN (no auth needed)
+// STAFF LOGIN (no auth needed)
 router.post("/login", staffLogin);
 
-// ⭐ OWNER ONLY ROUTES
+// OWNER ONLY ROUTES
 router.get("/", authMiddleware, requireRole("OWNER"), getUsers);
 router.post("/", authMiddleware, requireRole("OWNER"), createUser);
+router.put("/:id/branches", authMiddleware, requireRole("OWNER"), updateUserBranches); // ⭐ new
 router.put("/:id/toggle", authMiddleware, requireRole("OWNER"), toggleUser);
 router.delete("/:id", authMiddleware, requireRole("OWNER"), deleteUser);
 

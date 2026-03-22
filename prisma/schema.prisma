@@ -26,16 +26,27 @@ model Company {
 }
 
 model Branch {
-  id        Int       @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   name      String
-  address   String    @default("")
-  phone     String    @default("")
-  isActive  Boolean   @default(true)
+  address   String       @default("")
+  phone     String       @default("")
+  isActive  Boolean      @default(true)
   companyId Int
-  createdAt DateTime  @default(now())
-  company   Company   @relation(fields: [companyId], references: [id])
+  createdAt DateTime     @default(now())
+  company   Company      @relation(fields: [companyId], references: [id])
   sales     Sale[]
   purchases Purchase[]
+  users     UserBranch[] // ⭐ many-to-many
+}
+
+// ⭐ NEW join table
+model UserBranch {
+  userId    Int
+  branchId  Int
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
 }
 
 model Subscription {
@@ -53,16 +64,16 @@ model Subscription {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int          @id @default(autoincrement())
+  email     String       @unique
   password  String
-  role      String   @default("OWNER")
-  name      String   @default("")
+  role      String       @default("OWNER")
+  name      String       @default("")
   companyId Int
-  branchId  Int?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  company   Company  @relation(fields: [companyId], references: [id])
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  company   Company      @relation(fields: [companyId], references: [id])
+  branches  UserBranch[] // ⭐ removed branchId, added many-to-many
 }
 
 model Setting {
@@ -76,7 +87,7 @@ model Setting {
 }
 
 model Product {
-  id            Int      @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
   name          String
   sku           String
   hsn           String
@@ -84,10 +95,10 @@ model Product {
   stock         Int
   cgst          Float
   sgst          Float
-  discount      Float    @default(0)
+  discount      Float          @default(0)
   companyId     Int
-  createdAt     DateTime @default(now())
-  company       Company       @relation(fields: [companyId], references: [id])
+  createdAt     DateTime       @default(now())
+  company       Company        @relation(fields: [companyId], references: [id])
   saleItems     SaleItem[]
   purchaseItems PurchaseItem[]
 }
@@ -152,40 +163,40 @@ model PurchaseItem {
 }
 
 model Sale {
-  id              Int      @id @default(autoincrement())
-  invoiceNo       String
-  customerName    String
-  customerPhone   String
-  subTotal        Float
-  discountType    String   @default("percent")
-  discountValue   Float    @default(0)
-  discountAmount  Float    @default(0)
-  roundOff        Float
-  total           Float
-  paymentMode     String
-  amountReceived  Float
-  balance         Float
-  companyId       Int
-  branchId        Int?
-  createdAt       DateTime @default(now())
-  company         Company    @relation(fields: [companyId], references: [id])
-  branch          Branch?    @relation(fields: [branchId], references: [id])
-  items           SaleItem[]
+  id             Int        @id @default(autoincrement())
+  invoiceNo      String
+  customerName   String
+  customerPhone  String
+  subTotal       Float
+  discountType   String     @default("percent")
+  discountValue  Float      @default(0)
+  discountAmount Float      @default(0)
+  roundOff       Float
+  total          Float
+  paymentMode    String
+  amountReceived Float
+  balance        Float
+  companyId      Int
+  branchId       Int?
+  createdAt      DateTime   @default(now())
+  company        Company    @relation(fields: [companyId], references: [id])
+  branch         Branch?    @relation(fields: [branchId], references: [id])
+  items          SaleItem[]
 }
 
 model SaleItem {
-  id               Int     @id @default(autoincrement())
-  saleId           Int
-  productId        Int
-  productName      String
-  hsn              String
-  price            Float
-  qty              Int
-  discount         Float   @default(0)
-  discountedPrice  Float   @default(0)
-  cgst             Float
-  sgst             Float
-  total            Float
-  sale             Sale    @relation(fields: [saleId], references: [id])
-  product          Product @relation(fields: [productId], references: [id])
+  id              Int     @id @default(autoincrement())
+  saleId          Int
+  productId       Int
+  productName     String
+  hsn             String
+  price           Float
+  qty             Int
+  discount        Float   @default(0)
+  discountedPrice Float   @default(0)
+  cgst            Float
+  sgst            Float
+  total           Float
+  sale            Sale    @relation(fields: [saleId], references: [id])
+  product         Product @relation(fields: [productId], references: [id])
 }

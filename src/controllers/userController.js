@@ -12,12 +12,21 @@ export const getUsers = async (req, res) => {
         name: true,
         role: true,
         isActive: true,
-        createdAt: true
+        createdAt: true,
+        branches: {
+          include: { branch: true } // ⭐ include branch details
+        }
       },
       orderBy: { id: "asc" }
     });
 
-    res.json(users);
+    // Flatten so frontend gets user.branches = [{ id, name, ... }]
+    const mapped = users.map(u => ({
+      ...u,
+      branches: u.branches.map(ub => ub.branch)
+    }));
+
+    res.json(mapped);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -27,7 +36,7 @@ export const getUsers = async (req, res) => {
 /* ================= CREATE USER ================= */
 export const createUser = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, branchIds = [] } = req.body;
 
     if (!email || !password || !name || !role)
       return res.status(400).json({ error: "All fields required" });
@@ -35,7 +44,7 @@ export const createUser = async (req, res) => {
     if (!["MANAGER", "CASHIER"].includes(role))
       return res.status(400).json({ error: "Invalid role. Use MANAGER or CASHIER" });
 
-    // ⭐ CHECK SUBSCRIPTION USER LIMIT
+    // CHECK SUBSCRIPTION USER LIMIT
     const subscription = await prisma.subscription.findUnique({
       where: { companyId: req.companyId }
     });
@@ -61,7 +70,10 @@ export const createUser = async (req, res) => {
         password: hashed,
         name,
         role,
-        companyId: req.companyId
+        companyId: req.companyId,
+        branches: {
+          create: branchIds.map(id => ({ branchId: Number(id) })) // ⭐ assign branches
+        }
       },
       select: {
         id: true,
@@ -69,11 +81,62 @@ export const createUser = async (req, res) => {
         name: true,
         role: true,
         isActive: true,
-        createdAt: true
+        createdAt: true,
+        branches: {
+          include: { branch: true }
+        }
       }
     });
 
-    res.json(user);
+    res.json({
+      ...user,
+      branches: user.branches.map(ub => ub.branch)
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ================= UPDATE USER BRANCHES ================= */ // ⭐ NEW
+export const updateUserBranches = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { branchIds = [] } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || user.companyId !== req.companyId)
+      return res.status(404).json({ error: "User not found" });
+
+    // Delete existing assignments and recreate
+    await prisma.userBranch.deleteMany({ where: { userId: id } });
+
+    await prisma.userBranch.createMany({
+      data: branchIds.map(bid => ({
+        userId: id,
+        branchId: Number(bid)
+      }))
+    });
+
+    const updated = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        branches: {
+          include: { branch: true }
+        }
+      }
+    });
+
+    res.json({
+      ...updated,
+      branches: updated.branches.map(ub => ub.branch)
+    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -101,11 +164,17 @@ export const toggleUser = async (req, res) => {
         email: true,
         name: true,
         role: true,
-        isActive: true
+        isActive: true,
+        branches: {
+          include: { branch: true }
+        }
       }
     });
 
-    res.json(updated);
+    res.json({
+      ...updated,
+      branches: updated.branches.map(ub => ub.branch)
+    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -144,6 +213,9 @@ export const staffLogin = async (req, res) => {
       include: {
         company: {
           include: { subscription: true }
+        },
+        branches: {
+          include: { branch: true }
         }
       }
     });
@@ -158,7 +230,6 @@ export const staffLogin = async (req, res) => {
     if (!match)
       return res.status(400).json({ message: "Invalid password" });
 
-    // ⭐ SUBSCRIPTION CHECK
     const sub = user.company.subscription;
 
     if (!sub || sub.status === "suspended")
@@ -191,7 +262,8 @@ export const staffLogin = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        branches: user.branches.map(ub => ub.branch) // ⭐ include branches in login response
       },
       subscription: {
         plan: sub.plan,

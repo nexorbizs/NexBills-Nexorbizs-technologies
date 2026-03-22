@@ -10,17 +10,9 @@ export const dashboardSummary = async (req, res) => {
       where: { companyId }
     });
 
-    const totalInvoices = await prisma.sale.count({
-      where: { companyId }
-    });
-
-    const totalProducts = await prisma.product.count({
-      where: { companyId }
-    });
-
-    const totalCustomers = await prisma.customer.count({
-      where: { companyId }
-    });
+    const totalInvoices = await prisma.sale.count({ where: { companyId } });
+    const totalProducts = await prisma.product.count({ where: { companyId } });
+    const totalCustomers = await prisma.customer.count({ where: { companyId } });
 
     res.json({
       revenue: totalSales._sum.total || 0,
@@ -38,7 +30,7 @@ export const dashboardSummary = async (req, res) => {
 export const todaySales = async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
 
     const sales = await prisma.sale.findMany({
       where: {
@@ -59,19 +51,24 @@ export const todaySales = async (req, res) => {
 export const salesReport = async (req, res) => {
   try {
     const companyId = req.companyId;
-    const { from, to } = req.query;
+    const { from, to, branchId } = req.query; // ⭐ added branchId
 
     if (!from || !to)
       return res.status(400).json({ message: "From & To date required" });
 
+    const where = {
+      companyId,
+      createdAt: {
+        gte: new Date(from),
+        lte: new Date(to)
+      }
+    };
+
+    // ⭐ Filter by branch if provided
+    if (branchId) where.branchId = Number(branchId);
+
     const sales = await prisma.sale.findMany({
-      where: {
-        companyId,
-        createdAt: {
-          gte: new Date(from),
-          lte: new Date(to)
-        }
-      },
+      where,
       include: { items: true },
       orderBy: { id: "desc" }
     });
@@ -89,11 +86,11 @@ export const salesReport = async (req, res) => {
   }
 };
 
-/* ================= PROFIT & LOSS REPORT ================= */
+/* PROFIT & LOSS REPORT */
 export const profitLossReport = async (req, res) => {
   try {
     const companyId = req.companyId;
-    const { from, to } = req.query;
+    const { from, to, branchId } = req.query; // ⭐ added branchId
 
     const dateFilter = from && to ? {
       createdAt: {
@@ -102,36 +99,25 @@ export const profitLossReport = async (req, res) => {
       }
     } : {};
 
-    // ⭐ GET SALES
+    const branchFilter = branchId ? { branchId: Number(branchId) } : {}; // ⭐
+
     const sales = await prisma.sale.findMany({
-      where: { companyId, ...dateFilter },
+      where: { companyId, ...dateFilter, ...branchFilter },
       include: { items: true }
     });
 
-    // ⭐ GET PURCHASES
     const purchases = await prisma.purchase.findMany({
-      where: { companyId, ...dateFilter },
+      where: { companyId, ...dateFilter, ...branchFilter },
       include: { items: true }
     });
 
-    // ⭐ TOTAL REVENUE
     const totalRevenue = sales.reduce((s, sale) => s + sale.total, 0);
-
-    // ⭐ TOTAL PURCHASE COST
     const totalCost = purchases.reduce((s, p) => s + p.total, 0);
-
-    // ⭐ GROSS PROFIT
     const grossProfit = totalRevenue - totalCost;
+    const totalDiscount = sales.reduce((s, sale) => s + (sale.discountAmount || 0), 0);
 
-    // ⭐ TOTAL DISCOUNT GIVEN
-    const totalDiscount = sales.reduce((s, sale) =>
-      s + (sale.discountAmount || 0), 0
-    );
-
-    // ⭐ PER PRODUCT PROFIT
     const productMap = {};
 
-    // Sales side
     sales.forEach(sale => {
       sale.items.forEach(item => {
         if (!productMap[item.productName]) {
@@ -148,7 +134,6 @@ export const profitLossReport = async (req, res) => {
       });
     });
 
-    // Purchase side
     purchases.forEach(purchase => {
       purchase.items.forEach(item => {
         if (!productMap[item.productName]) {
@@ -164,7 +149,6 @@ export const profitLossReport = async (req, res) => {
       });
     });
 
-    // Calculate profit per product
     const productBreakdown = Object.values(productMap).map(p => ({
       ...p,
       profit: p.salesRevenue - p.purchaseCost
