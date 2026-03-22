@@ -21,7 +21,6 @@ export const addProduct = async (req, res) => {
     if (existingHsn)
       return res.status(400).json({ error: `HSN "${hsn}" already exists for product: ${existingHsn.name}` });
 
-    // ⭐ Check duplicate barcode
     if (barcode && barcode.trim() !== "") {
       const existingBarcode = await prisma.product.findFirst({
         where: { barcode: barcode.trim(), companyId: req.companyId }
@@ -73,22 +72,83 @@ export const getProducts = async (req, res) => {
   }
 };
 
-/* ================= SEARCH BY BARCODE ================= */ // ⭐ NEW
+/* ================= SEARCH BY BARCODE ================= */
 export const getProductByBarcode = async (req, res) => {
   try {
     const { barcode } = req.params;
-
     const product = await prisma.product.findFirst({
-      where: {
-        companyId: req.companyId,
-        barcode: barcode.trim()
+      where: { companyId: req.companyId, barcode: barcode.trim() }
+    });
+    if (!product)
+      return res.status(404).json({ error: "Product not found for this barcode" });
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ================= UPDATE PRODUCT ================= */ // ⭐ NEW
+export const updateProduct = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { name, sku, hsn, barcode, price, cgst, sgst, discount } = req.body;
+
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing || existing.companyId !== req.companyId)
+      return res.status(404).json({ error: "Product not found" });
+
+    // Check duplicate SKU (exclude current product)
+    if (sku && sku !== existing.sku) {
+      const dupSku = await prisma.product.findFirst({
+        where: { sku, companyId: req.companyId, id: { not: id } }
+      });
+      if (dupSku)
+        return res.status(400).json({ error: `SKU "${sku}" already exists for product: ${dupSku.name}` });
+    }
+
+    // Check duplicate HSN (exclude current product)
+    if (hsn && hsn !== existing.hsn) {
+      const dupHsn = await prisma.product.findFirst({
+        where: { hsn, companyId: req.companyId, id: { not: id } }
+      });
+      if (dupHsn)
+        return res.status(400).json({ error: `HSN "${hsn}" already exists for product: ${dupHsn.name}` });
+    }
+
+    // Check duplicate barcode (exclude current product)
+    if (barcode && barcode.trim() !== "" && barcode !== existing.barcode) {
+      const dupBarcode = await prisma.product.findFirst({
+        where: { barcode: barcode.trim(), companyId: req.companyId, id: { not: id } }
+      });
+      if (dupBarcode)
+        return res.status(400).json({ error: `Barcode "${barcode}" already exists for product: ${dupBarcode.name}` });
+    }
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: {
+        name: name || existing.name,
+        sku: sku || existing.sku,
+        hsn: hsn || existing.hsn,
+        barcode: barcode?.trim() ?? existing.barcode,
+        price: price !== undefined ? Number(price) : existing.price,
+        cgst: cgst !== undefined ? Number(cgst) : existing.cgst,
+        sgst: sgst !== undefined ? Number(sgst) : existing.sgst,
+        discount: discount !== undefined ? Number(discount) : existing.discount,
       }
     });
 
-    if (!product)
-      return res.status(404).json({ error: "Product not found for this barcode" });
+    await logActivity({
+      companyId: req.companyId,
+      userId: req.userId,
+      userName: req.userName || "Unknown",
+      module: "PRODUCT",
+      action: "UPDATED",
+      summary: `Updated product "${updated.name}" — Price: ₹${updated.price}, SKU: ${updated.sku}`,
+      details: JSON.stringify({ productId: id, name: updated.name, price: updated.price })
+    });
 
-    res.json(product);
+    res.json(updated);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
