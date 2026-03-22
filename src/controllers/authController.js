@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendOtpEmail } from "../utils/sendEmail.js"; // ⭐
 
 // ⭐ Plan days mapping
 const planDays = {
@@ -45,7 +46,7 @@ export const verifySecret = async (req, res) => {
 
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, secret, plan = "trial" } = req.body; // ⭐ plan
+    const { name, email, password, secret, plan = "trial" } = req.body;
 
     if (!name || !email || !password || !secret)
       return res.status(400).json({ message: "Missing field" });
@@ -73,7 +74,6 @@ export const signup = async (req, res) => {
       }
     });
 
-    // ⭐ CREATE SUBSCRIPTION BASED ON SELECTED PLAN
     const days = planDays[plan] || 30;
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + days);
@@ -129,7 +129,6 @@ export const login = async (req, res) => {
         subscriptionExpired: true
       });
 
-    // ⭐ Skip expiry check for lifetime plan
     if (sub.plan !== "lifetime" && new Date() > new Date(sub.expiryDate)) {
       await prisma.subscription.update({
         where: { companyId: company.id },
@@ -174,5 +173,126 @@ export const login = async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+/* ================= SEND OTP ================= */ // ⭐ NEW
+
+export const sendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    // Check if company or staff user exists
+    const company = await prisma.company.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!company && !user)
+      return res.status(404).json({ message: "No account found with this email" });
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Invalidate old OTPs for this email
+    await prisma.otpCode.updateMany({
+      where: { email, used: false },
+      data: { used: true }
+    });
+
+    // Save new OTP
+    await prisma.otpCode.create({
+      data: { email, otp, expiresAt }
+    });
+
+    // Send email
+    await sendOtpEmail(email, otp);
+
+    res.json({ message: "OTP sent to your email" });
+
+  } catch (err) {
+    console.error("Send OTP error:", err);
+    res.status(500).json({ message: "Failed to send OTP. Try again." });
+  }
+};
+
+/* ================= VERIFY OTP ================= */ // ⭐ NEW
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp)
+      return res.status(400).json({ message: "Email and OTP required" });
+
+    const record = await prisma.otpCode.findFirst({
+      where: { email, otp, used: false },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!record)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    if (new Date() > new Date(record.expiresAt))
+      return res.status(400).json({ message: "OTP expired. Request a new one." });
+
+    // Mark OTP as used
+    await prisma.otpCode.update({
+      where: { id: record.id },
+      data: { used: true }
+    });
+
+    res.json({ message: "OTP verified", verified: true });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================= RESET PASSWORD ================= */ // ⭐ NEW
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword)
+      return res.status(400).json({ message: "All fields required" });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+
+    // Verify OTP one more time
+    const record = await prisma.otpCode.findFirst({
+      where: { email, otp },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!record)
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    // Update company password if owner
+    const company = await prisma.company.findUnique({ where: { email } });
+    if (company) {
+      await prisma.company.update({
+        where: { email },
+        data: { password: hashed }
+      });
+      await prisma.user.updateMany({
+        where: { email, role: "OWNER" },
+        data: { password: hashed }
+      });
+    } else {
+      // Update staff user password
+      await prisma.user.update({
+        where: { email },
+        data: { password: hashed }
+      });
+    }
+
+    res.json({ message: "Password reset successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

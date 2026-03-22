@@ -224,3 +224,12 @@ model SaleItem {
   sale            Sale    @relation(fields: [saleId], references: [id])
   product         Product @relation(fields: [productId], references: [id])
 }
+
+model OtpCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
