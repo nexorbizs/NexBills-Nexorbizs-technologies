@@ -3,17 +3,13 @@ import prisma from "../config/prisma.js";
 /* ADD CUSTOMER */
 export const addCustomer = async (req, res) => {
   try {
-    const { name, phone, address } = req.body;
+    const { name, phone, address, branchId } = req.body; // ⭐ branchId
 
     if (!name || !phone || !address)
       return res.status(400).json({ error: "All fields required" });
 
-    // ⭐ DUPLICATE PHONE CHECK
     const existing = await prisma.customer.findFirst({
-      where: {
-        phone,
-        companyId: req.companyId
-      }
+      where: { phone, companyId: req.companyId }
     });
 
     if (existing)
@@ -26,7 +22,8 @@ export const addCustomer = async (req, res) => {
         name,
         phone,
         address,
-        companyId: req.companyId
+        companyId: req.companyId,
+        branchId: branchId ? Number(branchId) : null // ⭐ save branchId
       }
     });
 
@@ -40,8 +37,18 @@ export const addCustomer = async (req, res) => {
 /* GET CUSTOMERS */
 export const getCustomers = async (req, res) => {
   try {
+    const { branchIds } = req.query; // ⭐ branchIds filter
+
+    const where = { companyId: req.companyId };
+
+    // ⭐ Filter by assigned branches for CASHIER/MANAGER
+    if (branchIds) {
+      const ids = branchIds.split(",").map(Number);
+      where.branchId = { in: ids };
+    }
+
     const customers = await prisma.customer.findMany({
-      where: { companyId: req.companyId },
+      where,
       orderBy: { id: "desc" }
     });
 

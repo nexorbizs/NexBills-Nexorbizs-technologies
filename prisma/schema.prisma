@@ -36,6 +36,7 @@ model Branch {
   company   Company      @relation(fields: [companyId], references: [id])
   sales     Sale[]
   purchases Purchase[]
+  customers Customer[]
   users     UserBranch[] // ⭐ many-to-many
 }
 
@@ -109,8 +110,10 @@ model Customer {
   phone     String
   address   String
   companyId Int
+  branchId  Int?   
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
 }
 
 model Supplier {
