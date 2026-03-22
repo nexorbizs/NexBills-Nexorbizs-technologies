@@ -3,7 +3,10 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOtpEmail = async (toEmail, otp) => {
-  await resend.emails.send({
+  console.log("Sending email to:", toEmail);
+  console.log("RESEND KEY:", process.env.RESEND_API_KEY ? "EXISTS" : "MISSING");
+
+  const result = await resend.emails.send({
     from: "NexBills <noreply@nexorbizs.com>",
     to: toEmail,
     subject: "Password Reset OTP — NexBills",
@@ -21,4 +24,6 @@ export const sendOtpEmail = async (toEmail, otp) => {
       </div>
     `
   });
+
+  console.log("Resend result:", JSON.stringify(result));
 };
