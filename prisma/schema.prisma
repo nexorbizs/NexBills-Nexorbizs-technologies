@@ -22,13 +22,27 @@ model Company {
   suppliers    Supplier[]
   purchases    Purchase[]
   subscription Subscription?
+  branches     Branch[]
+}
+
+model Branch {
+  id        Int       @id @default(autoincrement())
+  name      String
+  address   String    @default("")
+  phone     String    @default("")
+  isActive  Boolean   @default(true)
+  companyId Int
+  createdAt DateTime  @default(now())
+  company   Company   @relation(fields: [companyId], references: [id])
+  sales     Sale[]
+  purchases Purchase[]
 }
 
 model Subscription {
   id          Int      @id @default(autoincrement())
   companyId   Int      @unique
-  plan        String   @default("trial")   // trial, basic, pro, enterprise
-  status      String   @default("active")  // active, expired, suspended
+  plan        String   @default("trial")
+  status      String   @default("active")
   startDate   DateTime @default(now())
   expiryDate  DateTime
   maxUsers    Int      @default(1)
@@ -42,9 +56,10 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
-  role      String   @default("OWNER")   // OWNER, MANAGER, CASHIER
+  role      String   @default("OWNER")
   name      String   @default("")
   companyId Int
+  branchId  Int?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   company   Company  @relation(fields: [companyId], references: [id])
@@ -113,9 +128,11 @@ model Purchase {
   balance        Float          @default(0)
   notes          String         @default("")
   companyId      Int
+  branchId       Int?
   createdAt      DateTime       @default(now())
   company        Company        @relation(fields: [companyId], references: [id])
   supplier       Supplier       @relation(fields: [supplierId], references: [id])
+  branch         Branch?        @relation(fields: [branchId], references: [id])
   items          PurchaseItem[]
 }
 
@@ -149,8 +166,10 @@ model Sale {
   amountReceived  Float
   balance         Float
   companyId       Int
+  branchId        Int?
   createdAt       DateTime @default(now())
   company         Company    @relation(fields: [companyId], references: [id])
+  branch          Branch?    @relation(fields: [branchId], references: [id])
   items           SaleItem[]
 }
 

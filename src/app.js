@@ -12,6 +12,7 @@ import supplierRoutes from "./routes/supplierRoutes.js";
 import purchaseRoutes from "./routes/purchaseRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import branchRoutes from "./routes/branchRoutes.js";
 
 const app = express();
 
@@ -41,5 +42,6 @@ app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/branches", branchRoutes);
 
 export default app;
