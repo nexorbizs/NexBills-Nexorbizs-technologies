@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Setting" ADD COLUMN     "logoUrl" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "upiId" TEXT NOT NULL DEFAULT '';

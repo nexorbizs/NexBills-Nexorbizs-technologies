@@ -104,6 +104,8 @@ model Setting {
   gstNumber String
   phone     String
   address   String
+  upiId     String  @default("") 
+  logoUrl   String  @default("") 
   company   Company @relation(fields: [companyId], references: [id])
 }
 

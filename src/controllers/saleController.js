@@ -104,7 +104,10 @@ export const createSale = async (req, res) => {
         branchId,
         items: { create: saleItems }
       },
-      include: { items: true }
+      include: {
+        items: true,
+        branch: true  // ⭐ ADD THIS
+      }
     });
 
     // ⭐ LOG ACTIVITY

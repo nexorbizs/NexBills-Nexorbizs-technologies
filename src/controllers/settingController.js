@@ -3,16 +3,21 @@ import prisma from "../config/prisma.js";
 export const saveSettings = async (req, res) => {
   try {
     const companyId = req.companyId;
-    const { shopName, gstNumber, phone, address } = req.body;
+    const { shopName, gstNumber, phone, address, upiId, logoUrl } = req.body; // ⭐
 
-    const existing = await prisma.setting.findUnique({
-      where: { companyId }
-    });
+    const existing = await prisma.setting.findUnique({ where: { companyId } });
 
     if (existing) {
       const updated = await prisma.setting.update({
         where: { companyId },
-        data: { shopName, gstNumber, phone, address }
+        data: {
+          shopName,
+          gstNumber,
+          phone,
+          address,
+          upiId: upiId || "",       // ⭐
+          logoUrl: logoUrl || ""    // ⭐
+        }
       });
       return res.json(updated);
     }
@@ -23,7 +28,9 @@ export const saveSettings = async (req, res) => {
         shopName,
         gstNumber,
         phone,
-        address
+        address,
+        upiId: upiId || "",         // ⭐
+        logoUrl: logoUrl || ""      // ⭐
       }
     });
 
@@ -39,9 +46,7 @@ export const getSettings = async (req, res) => {
     const setting = await prisma.setting.findUnique({
       where: { companyId: req.companyId }
     });
-
     res.json(setting);
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
