@@ -18,13 +18,16 @@ export const authMiddleware = async (req, res, next) => {
     req.role = decoded.role || "OWNER";
 
     // ⭐ Fetch user name for activity logging
-    if (decoded.userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: { name: true }
-      });
-      req.userName = user?.name || "Unknown";
-    }
+    // ⭐ Fetch user name for activity logging
+if (decoded.userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.userId },
+    select: { name: true, email: true }
+  });
+  req.userName = (user?.name && user.name.trim() !== "")
+    ? user.name
+    : user?.email || "Unknown";
+}
 
     next();
 
