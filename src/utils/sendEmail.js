@@ -1,21 +1,10 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,          // ⭐ changed from 465 to 587
-  secure: false,      // ⭐ false for port 587 (uses STARTTLS)
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOtpEmail = async (toEmail, otp) => {
-  await transporter.sendMail({
-    from: `"NexBills" <${process.env.GMAIL_USER}>`,
+  await resend.emails.send({
+    from: "NexBills <onboarding@resend.dev>", // ⭐ use this until you verify your domain
     to: toEmail,
     subject: "Password Reset OTP — NexBills",
     html: `
