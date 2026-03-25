@@ -5,9 +5,11 @@ import {
   toggleUser,
   deleteUser,
   staffLogin,
-  updateUserBranches // ⭐ new
+  updateUserBranches
 } from "../controllers/userController.js";
 import { authMiddleware, requireRole } from "../middleware/authMiddleware.js";
+import checkFeature from "../middleware/checkFeature.js";
+import { checkUserLimit } from "../middleware/checkLimit.js";
 
 const router = express.Router();
 
@@ -15,10 +17,10 @@ const router = express.Router();
 router.post("/login", staffLogin);
 
 // OWNER ONLY ROUTES
-router.get("/", authMiddleware, requireRole("OWNER"), getUsers);
-router.post("/", authMiddleware, requireRole("OWNER"), createUser);
-router.put("/:id/branches", authMiddleware, requireRole("OWNER"), updateUserBranches); // ⭐ new
-router.put("/:id/toggle", authMiddleware, requireRole("OWNER"), toggleUser);
-router.delete("/:id", authMiddleware, requireRole("OWNER"), deleteUser);
+router.get("/", authMiddleware, requireRole("OWNER"), checkFeature("staff_role_management"), getUsers);
+router.post("/", authMiddleware, requireRole("OWNER"), checkUserLimit, createUser);
+router.put("/:id/branches", authMiddleware, requireRole("OWNER"), checkFeature("staff_role_management"), updateUserBranches);
+router.put("/:id/toggle", authMiddleware, requireRole("OWNER"), checkFeature("staff_role_management"), toggleUser);
+router.delete("/:id", authMiddleware, requireRole("OWNER"), checkFeature("staff_role_management"), deleteUser);
 
 export default router;
