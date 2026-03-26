@@ -13,6 +13,8 @@ const checkFeature = (featureKey) => async (req, res, next) => {
     const plan = subscription?.plan || "basic";
     const access = PLAN_FEATURES[plan] || PLAN_FEATURES["basic"];
 
+    
+
     if (!access[featureKey]) {
       return res.status(403).json({
         message: `This feature is not available in your ${plan} plan. Please upgrade.`,
