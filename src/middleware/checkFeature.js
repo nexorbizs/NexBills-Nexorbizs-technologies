@@ -11,17 +11,30 @@ const checkFeature = (featureKey) => async (req, res, next) => {
     });
 
     const plan = subscription?.plan || "basic";
-    const access = PLAN_FEATURES[plan] || PLAN_FEATURES["basic"];
+const baseAccess = PLAN_FEATURES[plan] || PLAN_FEATURES["basic"];
 
-    
+const keyMap = {
+  purchases:  "purchase_management",
+  suppliers:  "supplier_management",
+  branches:   "multi_branch",
+  reports:    "reports",
+  activity:   "activity_log",
+  staffUsers: "staff_role_management",
+};
 
-    if (!access[featureKey]) {
-      return res.status(403).json({
-        message: `This feature is not available in your ${plan} plan. Please upgrade.`,
-        feature: featureKey,
-        currentPlan: plan,
-      });
-    }
+const adminKey = keyMap[featureKey] || featureKey;
+const dbFeatures = subscription?.features || {};
+const hasAccess = (adminKey in dbFeatures)
+  ? dbFeatures[adminKey]
+  : baseAccess[featureKey];
+
+if (!hasAccess) {
+  return res.status(403).json({
+    message: `This feature is not available in your ${plan} plan. Please upgrade.`,
+    feature: featureKey,
+    currentPlan: plan,
+  });
+}
 
     req.plan = plan;
     next();

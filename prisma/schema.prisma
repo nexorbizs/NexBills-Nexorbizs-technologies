@@ -61,7 +61,7 @@ model Subscription {
   maxUsers    Int      @default(1)
   maxBranches Int      @default(1)
   notes       String   @default("")
-   features    Json?
+  features    Json?
   createdAt   DateTime @default(now())
   company     Company  @relation(fields: [companyId], references: [id])
 }
